@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <vector>
+#include <omp.h>
 
 void merge(std::vector<int>& vec, int begin, int mid, int end) {
   std::vector<int> tmp(end-begin+1);
@@ -23,13 +24,23 @@ void merge(std::vector<int>& vec, int begin, int mid, int end) {
 void merge_sort(std::vector<int>& vec, int begin, int end) {
   if(begin < end) {
     int mid = (begin + end) / 2;
-    merge_sort(vec, begin, mid);
-    merge_sort(vec, mid+1, end);
+#pragma omp parallel
+    {
+#pragma omp sections
+      {
+        merge_sort(vec, begin, mid);
+      }
+#pragma omp sections
+      {
+        merge_sort(vec, mid+1, end);
+      }
+    }
     merge(vec, begin, mid, end);
   }
 }
 
 int main() {
+  omp_set_num_threads(56);
   int n = 20;
   std::vector<int> vec(n);
   for (int i=0; i<n; i++) {
