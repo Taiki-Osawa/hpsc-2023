@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 
+#結果を高速に描画する
 nx = 41
 ny = 41
 nt = 500

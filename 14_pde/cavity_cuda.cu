@@ -75,26 +75,6 @@ __global__ void calculateUV(double* d_u, double* d_v, double* d_p, double* d_un,
     }
 }
 
-__global__ void updateBoundaryUV(double* d_u, double* d_v, int nx, int ny) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    int j = blockIdx.y * blockDim.y + threadIdx.y;
-    
-    if (j < ny) {
-        d_u[j * nx] = 0;
-        d_u[j * nx + (nx - 1)] = 0;
-        d_v[j * nx] = 0;
-        d_v[j * nx + (nx - 1)] = 0;
-    }
-    
-    if (i < nx) {
-        d_u[i] = 0;
-        d_u[(ny - 1) * nx + i] = 1;
-        d_v[i] = 0;
-        d_v[(ny - 1) * nx + i] = 0;
-    }
- 
-}
-
 int main() {
     int nx = 41;
     int ny = 41;
@@ -122,13 +102,6 @@ int main() {
     double* d_un;
     double* d_vn;
     double* d_pn;
-    int* d_nx;
-    int* d_ny;
-    double* d_dx;
-    double* d_dy;
-    double* d_dt;
-    double* d_rho;
-    double* d_nu;    
 
     cudaMalloc((void**)&d_u, nx * ny * sizeof(double));
     cudaMalloc((void**)&d_v, nx * ny * sizeof(double));
@@ -137,13 +110,6 @@ int main() {
     cudaMalloc((void**)&d_un, nx * ny * sizeof(double));
     cudaMalloc((void**)&d_vn, nx * ny * sizeof(double));
     cudaMalloc((void**)&d_pn, nx * ny * sizeof(double));
-    cudaMalloc((void**)&d_nx, sizeof(int));
-    cudaMalloc((void**)&d_ny, sizeof(int));
-    cudaMalloc((void**)&d_dx, sizeof(double));
-    cudaMalloc((void**)&d_dy, sizeof(double));
-    cudaMalloc((void**)&d_dt, sizeof(double));
-    cudaMalloc((void**)&d_rho, sizeof(double));
-    cudaMalloc((void**)&d_nu, sizeof(double));
 
     for (int i = 0; i < nx; ++i)
         x[i] = i * dx;
@@ -152,17 +118,7 @@ int main() {
         y[i] = i * dy;
 
     // ホストからデバイスへのデータ転送
-    //cudaMemcpy(d_u, u.data(), nx * ny * sizeof(double), cudaMemcpyHostToDevice);
-    //cudaMemcpy(d_v, v.data(), nx * ny * sizeof(double), cudaMemcpyHostToDevice);
-    //cudaMemcpy(d_p, p.data(), nx * ny * sizeof(double), cudaMemcpyHostToDevice);
     cudaMemcpy(d_b, b.data(), nx * ny * sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_nx, &nx, sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_ny, &ny, sizeof(int), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dx, &dx, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dy, &dy, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_dt, &dt, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_rho, &rho, sizeof(double), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_nu, &nu, sizeof(double), cudaMemcpyHostToDevice);
 
     dim3 gridSize((nx + 15) / 16, (ny + 15) / 16);
     dim3 blockSize(16, 16);
@@ -179,8 +135,6 @@ int main() {
 
         // 圧力方程式を解く
         for (int it = 0; it < nit; ++it) {
-            //cudaMemcpy(d_un, d_u, nx * ny * sizeof(double), cudaMemcpyDeviceToDevice);
-            //cudaMemcpy(d_vn, d_v, nx * ny * sizeof(double), cudaMemcpyDeviceToDevice);
             cudaMemcpy(d_pn, d_p, nx * ny * sizeof(double), cudaMemcpyDeviceToDevice);
 
             //calculateB or 前のiterationのupdateBoundaryP の結果を待つ
@@ -221,7 +175,7 @@ int main() {
             v[j * nx + nx - 1] = 0.0;
         }
 
-        // Output the results (optional)
+        // ステップごとに結果をresult_[n].txtとして出力
         std::ofstream outFile("results_" + std::to_string(n) + ".txt");
         if (outFile.is_open()) {
             for (int j = 0; j < ny; ++j) {
@@ -241,13 +195,6 @@ int main() {
     cudaFree(d_un);
     cudaFree(d_vn);
     cudaFree(d_pn);
-    cudaFree(d_nx);
-    cudaFree(d_ny);
-    cudaFree(d_dx);
-    cudaFree(d_dy);
-    cudaFree(d_dt);
-    cudaFree(d_rho);
-    cudaFree(d_nu);    
 
     return 0;
 }
